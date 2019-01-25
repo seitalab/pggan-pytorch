@@ -42,3 +42,10 @@ runs/
 
 # pycharm IDE files
 .idea/
+
+# dotenv
+.env
+
+# data
+data/
+data
