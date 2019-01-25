@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser('PGGAN')
 ## general settings.
 parser.add_argument('--train_data_root', type=str, default='/home1/irteam/nashory/data/CelebA/Img')
 parser.add_argument('--random_seed', type=int, default=int(time.time()))
-parser.add_argument('--n_gpu', type=int, default=1)             # for Multi-GPU training.
+parser.add_argument('--n_gpu', type=int, default=4)             # for Multi-GPU training.
 
 
 
@@ -25,9 +25,10 @@ parser.add_argument('--nz', type=int, default=512)              # input dimensio
 parser.add_argument('--ngf', type=int, default=512)             # feature dimension of final layer of generator.
 parser.add_argument('--ndf', type=int, default=512)             # feature dimension of first layer of discriminator.
 parser.add_argument('--TICK', type=int, default=1000)           # 1 tick = 1000 images = (1000/batch_size) iter.
-parser.add_argument('--max_resl', type=int, default=8)          # 10-->1024, 9-->512, 8-->256
-parser.add_argument('--trns_tick', type=int, default=200)       # transition tick
-parser.add_argument('--stab_tick', type=int, default=100)       # stabilization tick
+parser.add_argument('--max_resl', type=int, default=5)          # 10-->1024, 9-->512, 8-->256
+parser.add_argument('--trns_tick', type=int, default=800)       # transition tick
+parser.add_argument('--stab_tick', type=int, default=800)       # stabilization tick
+parser.add_argument('--lambda_', type=int, default=10)          # lambda for gradient penalty
 
 
 ## network structure.
@@ -52,7 +53,7 @@ parser.add_argument('--beta2', type=float, default=0.99)            # beta2 for 
 
 
 ## display and save setting.
-parser.add_argument('--use_tb', type=bool, default=True)            # enable tensorboard visualization
+parser.add_argument('--use_tb', type=bool, default=False)            # enable tensorboard visualization
 parser.add_argument('--save_img_every', type=int, default=20)       # save images every specified iteration.
 parser.add_argument('--display_tb_every', type=int, default=5)      # display progress every specified iteration.
 
