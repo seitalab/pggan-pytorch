@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from torch.autograd import Variable
 from custom_layers import *
 import copy
 
@@ -54,7 +53,7 @@ def soft_copy_param(target_link, source_link, tau):
 
 def get_module_names(model):
     names = []
-    for key, val in model.state_dict().iteritems():
+    for key, val in model.state_dict().items():
         name = key.split('.')[0]
         if not name in names:
             names.append(name)
@@ -133,7 +132,7 @@ class Generator(nn.Module):
                 new_model[-1].load_state_dict(module.state_dict())      # copy pretrained weights
             
         if resl >= 3 and resl <= 9:
-            print 'growing network[{}x{} to {}x{}]. It may take few seconds...'.format(int(pow(2,resl-1)), int(pow(2,resl-1)), int(pow(2,resl)), int(pow(2,resl)))
+            print('growing network[{}x{} to {}x{}]. It may take few seconds...'.format(int(pow(2,resl-1)), int(pow(2,resl-1)), int(pow(2,resl)), int(pow(2,resl))))
             low_resl_to_rgb = deepcopy_module(self.model, 'to_rgb_block')
             prev_block = nn.Sequential()
             prev_block.add_module('low_resl_upsample', nn.Upsample(scale_factor=2, mode='nearest'))
@@ -254,7 +253,7 @@ class Discriminator(nn.Module):
     def grow_network(self, resl):
             
         if resl >= 3 and resl <= 9:
-            print 'growing network[{}x{} to {}x{}]. It may take few seconds...'.format(int(pow(2,resl-1)), int(pow(2,resl-1)), int(pow(2,resl)), int(pow(2,resl)))
+            print('growing network[{}x{} to {}x{}]. It may take few seconds...'.format(int(pow(2,resl-1)), int(pow(2,resl-1)), int(pow(2,resl)), int(pow(2,resl))))
             low_resl_from_rgb = deepcopy_module(self.model, 'from_rgb_block')
             prev_block = nn.Sequential()
             prev_block.add_module('low_resl_downsample', nn.AvgPool2d(kernel_size=2))
