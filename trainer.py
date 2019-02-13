@@ -132,7 +132,7 @@ class trainer:
 
             if floor(self.resl) > self.max_resl:
                 self.phase = 'final'
-                self.resl = self.max_resl + (self.stab_tick + self.trns_tick)*delta
+                self.resl = self.max_resl
 
 
             
