@@ -131,7 +131,7 @@ class Generator(nn.Module):
                 new_model.add_module(name, module)                      # make new structure and,
                 new_model[-1].load_state_dict(module.state_dict())      # copy pretrained weights
             
-        if resl >= 3 and resl <= 9:
+        if resl >= 3 and resl <= 10:
             print('growing network[{}x{} to {}x{}]. It may take few seconds...'.format(int(pow(2,resl-1)), int(pow(2,resl-1)), int(pow(2,resl)), int(pow(2,resl))))
             low_resl_to_rgb = deepcopy_module(self.model, 'to_rgb_block')
             prev_block = nn.Sequential()

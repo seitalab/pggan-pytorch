@@ -16,7 +16,7 @@ from slack_print import SlackPrint
 # environmental variables
 load_dotenv('.env')
 # slack initialization
-sp = SlackPrint(os.environ['ACCESS_TOKEN'], '#dl_prog_tacchan7412')
+sp = SlackPrint(os.environ['ACCESS_TOKEN'], '#dl_prog_tacchan7412_2')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -174,7 +174,6 @@ class trainer:
         for step in range(2, self.max_resl+1+5):
             print(step)
             for i in range(0, (self.trns_tick+self.stab_tick)*self.TICK, self.loader.batchsize):
-                print(i)
                 self.globalIter = self.globalIter+1
                 self.stack = self.stack + self.loader.batchsize
                 if self.stack > ceil(len(self.loader.dataset)):
