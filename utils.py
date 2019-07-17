@@ -3,11 +3,8 @@
 
 import os
 import torch
-import numpy as np
-import torchvision
 import torchvision.transforms as transforms
-import torchvision.utils as vutils
-import time
+import errno
 
 
 def adjust_dyn_range(x, drange_in, drange_out):
@@ -45,6 +42,7 @@ def save_image_single(x, path, imsize=512):
     im = Image.fromarray(ndarr)
     im = im.resize((imsize,imsize), Image.NEAREST)
     im.save(path)
+    return grid
 
 
 def save_image_grid(x, path, imsize=512, ngrid=4):
@@ -54,6 +52,7 @@ def save_image_grid(x, path, imsize=512, ngrid=4):
     im = Image.fromarray(ndarr)
     im = im.resize((imsize,imsize), Image.NEAREST)
     im.save(path)
+    return grid
 
 
 
@@ -63,24 +62,6 @@ def load_model(net, path):
 def save_model(net, path):
     torch.save(net.state_dict(), path)
 
-
-def make_summary(writer, key, value, step):
-    if hasattr(value, '__len__'):
-        for idx, img in enumerate(value):
-            summary = tf.Summary()
-            sio = BytesIO()
-            scipy.misc.toimage(img).save(sio, format='png')
-            image_summary = tf.Summary.Image(encoded_image_string=sio.getvalue())
-            summary.value.add(tag="{}/{}".format(key, idx), image=image_summary)
-            writer.add_summary(summary, global_step=step)
-    else:
-        summary = tf.Summary(value=[tf.Summary.Value(tag=key, simple_value=value)])
-        writer.add_summary(summary, global_step=step)
-
-
-
-
-import torch
 import math
 irange = range
 def make_grid(tensor, nrow=8, padding=2,
@@ -175,3 +156,13 @@ def save_image(tensor, filename, nrow=8, padding=2,
     ndarr = grid.mul(255).clamp(0, 255).byte().permute(1, 2, 0).numpy()
     im = Image.fromarray(ndarr)
     im.save(filename)
+
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise

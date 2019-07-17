@@ -2,29 +2,35 @@ import dataloader as DL
 from config import config
 import network as net
 from math import floor, ceil
-import os, sys
+import os
 import torch
 from torch.autograd import grad
-import torchvision.transforms as transforms
 from torch.optim import Adam
-from tqdm import tqdm
-import utils as utils
+import utils
 import numpy as np
-from dotenv import load_dotenv
-from slack_print import SlackPrint
-
-# environmental variables
-load_dotenv('.env')
-# slack initialization
-sp = SlackPrint(os.environ['ACCESS_TOKEN'], '#dl_prog_tacchan7412_2')
+from tensorboardX import SummaryWriter
+import mlflow
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class trainer:
-    def __init__(self, config):
+    def __init__(self, config, writer):
         self.config = config
-        
+        self.writer = writer
+        mlflow.set_tracking_uri(os.path.abspath('../storage/PGGAN/mlruns'))
+        mlflow.set_experiment(config.dataset)
+        with mlflow.start_run(run_name=config.date_str):
+            # params
+            for k, v in vars(config).items():
+                mlflow.log_param(k, v)
+
+        base_dir = '../storage/PGGAN'
+        result_dir = os.path.join(base_dir, 'results',
+                                  config.dataset, config.date_str)
+        self.image_dir = os.path.join(result_dir, 'images')
+        self.model_dir = os.path.join(result_dir, 'models')
+
         self.nz = config.nz
         self.optimizer = config.optimizer
 
@@ -49,7 +55,7 @@ class trainer:
         self.flag_add_drift = self.config.flag_add_drift
 
         self.lambda_ = config.lambda_
-        
+
         # network and cirterion
         self.G = net.Generator(config)
         self.D = net.Discriminator(config)
@@ -182,7 +188,7 @@ class trainer:
 
                 # reslolution scheduler.
                 self.resl_scheduler()
-                
+
                 # zero gradients.
                 self.G.zero_grad()
                 self.D.zero_grad()
@@ -193,7 +199,7 @@ class trainer:
                     self.x = self.add_noise(self.x)
                 self.z.resize_(self.loader.batchsize, self.nz).normal_(0.0, 1.0).to(device)
                 self.x_tilde = self.G(self.z)
-               
+
                 self.fx = self.D(self.x)
                 self.fx_tilde = self.D(self.x_tilde.detach())
                 # mse loss
@@ -206,11 +212,16 @@ class trainer:
                 x_hat = alpha * self.x.detach() + (1 - alpha) * self.x_tilde.detach()
                 x_hat.requires_grad_()
                 pred_hat = self.D(x_hat)
-                gradients = grad(outputs=pred_hat, inputs=x_hat, 
+                gradients = grad(outputs=pred_hat, inputs=x_hat,
                                  grad_outputs=torch.ones(pred_hat.size()).to(device),
                                  create_graph=True, retain_graph=True, only_inputs=True)[0]
                 gradient_penalty = self.lambda_ * ((gradients.view(gradients.size()[0], -1).norm(2, 1) - 1) ** 2).mean()
                 loss_d = loss_d_real + loss_d_fake + gradient_penalty
+                self.writer.add_scalar('D_loss', loss_d.item(), self.globalIter)
+                scalars_dic = {'D_loss_real': loss_d_real.item(),
+                               'D_loss_fake': loss_d_fake.item(),
+                               'grad_penalty': gradient_penalty.item()}
+                self.writer.add_scalars('D_loss_detail', scalars_dic, self.globalIter)
                 loss_d.backward()
                 self.opt_d.step()
 
@@ -219,26 +230,27 @@ class trainer:
                 # mse loss
                 # loss_g = self.mse(fx_tilde, self.real_label.detach())
                 # WGAN_GP loss
-                loss_g = -torch.mean(fx_tilde) 
+                loss_g = -torch.mean(fx_tilde)
+                self.writer.add_scalar('G_loss', loss_g.item(), self.globalIter)
                 loss_g.backward()
                 self.opt_g.step()
 
                 # logging.
                 log_msg = ' [E:{0}][T:{1}][{2:6}/{3:6}]  errD: {4:.4f} | errG: {5:.4f} | [lr:{10:.5f}][cur:{6:.3f}][resl:{7:4}][{8}][{9:.1f}%]'.format(self.epoch, self.globalTick, self.stack, len(self.loader.dataset), loss_d.item(), loss_g.item(), self.resl, int(pow(2,floor(self.resl))), self.phase, self.complete, self.lr)
-                sp.print(log_msg)
+                print(log_msg)
 
                 # save model.
-                self.snapshot('repo/model')
+                self.snapshot(self.model_dir)
 
                 # save image grid.
                 if self.globalIter%self.config.save_img_every == 0:
                     x_test = self.G(self.z_test)
-                    os.system('mkdir -p repo/save/grid')
-                    utils.save_image_grid(x_test.detach(), 'repo/save/grid/{}_{}_{}.jpg'.format(int(self.globalIter/self.config.save_img_every), self.phase, self.complete))
-                    sp.upload('repo/save/grid/{}_{}_{}.jpg'.format(int(self.globalIter/self.config.save_img_every), self.phase, self.complete))
-                    os.system('mkdir -p repo/save/resl_{}'.format(int(floor(self.resl))))
-                    utils.save_image_single(x_test.detach(), 'repo/save/resl_{}/{}_{}.jpg'.format(int(floor(self.resl)),int(self.globalIter/self.config.save_img_every), self.phase, self.complete))
-                    sp.upload('repo/save/resl_{}/{}_{}.jpg'.format(int(floor(self.resl)),int(self.globalIter/self.config.save_img_every), self.phase, self.complete))
+                    utils.mkdir_p(os.path.join(self.image_dir, 'grid'))
+                    grid = utils.save_image_grid(x_test.detach(), os.path.join(self.image_dir, 'grid', '{}_{}_{}.jpg'.format(int(self.globalIter/self.config.save_img_every), self.phase, self.complete)))
+                    self.writer.add_image('grid_image', grid, self.globalIter)
+                    utils.mkdir_p(os.path.join(self.image_dir, 'resl_{}'.format(int(floor(self.resl)))))
+                    img = utils.save_image_single(x_test.detach(), os.path.join(self.image_dir, 'resl_{}'.format(int(floor(self.resl))), '{}_{}.jpg'.format(int(self.globalIter/self.config.save_img_every), self.phase, self.complete)))
+                    self.writer.add_image('single_image', img, self.globalIter)
 
 
     def get_state(self, target):
@@ -259,8 +271,7 @@ class trainer:
 
 
     def snapshot(self, path):
-        if not os.path.exists(path):
-            os.system('mkdir -p {}'.format(path))
+        utils.mkdir_p(path)
         # save every 100 tick if the network is in stab phase.
         ndis = 'dis_R{}_T{}.pth.tar'.format(int(floor(self.resl)), self.globalTick)
         ngen = 'gen_R{}_T{}.pth.tar'.format(int(floor(self.resl)), self.globalTick)
@@ -280,5 +291,9 @@ for k, v in vars(config).items():
     print('  {}: {}'.format(k, v))
 print('-------------------------------------------------')
 torch.backends.cudnn.benchmark = True           # boost speed.
-trainer = trainer(config)
+writer = SummaryWriter(os.path.join('../storage/PGGAN',
+                                    'runs',
+                                    config.dataset,
+                                    config.date_str))
+trainer = trainer(config, writer)
 trainer.train()

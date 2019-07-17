@@ -10,6 +10,7 @@ class dataloader:
     def __init__(self, config):
         # self.root = config.train_data_root
         self.dataset_name = config.dataset
+        self.cfg = config
         self.batch_table = {4:32, 8:32, 16:32, 32:16, 64:16, 128:16, 256:12, 512:3, 1024:1} # change this according to available gpu memory.
         self.batchsize = int(self.batch_table[pow(2,2)])        # we start from 2^2=4
         self.imsize = int(pow(2,2))
@@ -35,10 +36,8 @@ class dataloader:
                                             transform=transform,
                                             image_list_file='./data/nih-chest-xrays/labels/train_list.txt')
         elif self.dataset_name == 'emarie':
-            self.dataset = EmarieDataset(root_dir='./data/20181018_Square/',
-                                         transform=transform)
-        elif self.dataset_name == 'emarie-skirt-shell':
-            self.dataset = EmarieSkirtShellDataset(root_dir='./data/skirt_shell/', transform=transform)
+            self.dataset = EmarieDataset(root_dir='../dataset/skirt_shell/raw',
+                                         mix=self.cfg.mix, transform=transform)
 
         self.dataloader = DataLoader(
             dataset=self.dataset,
@@ -62,30 +61,19 @@ class dataloader:
 
 
 class EmarieDataset(Dataset):
-    def __init__(self, root_dir, transform=None):
-        files = os.listdir(root_dir)
-        files_file = [os.path.join(root_dir, f) for f in files if os.path.isfile(os.path.join(root_dir, f))]
-        self.image_names = files_file
-        self.transform = transform
-
-    def __getitem__(self, index):
-        image_name = self.image_names[index]
-        image = Image.open(image_name).convert('RGB')
-        if self.transform is not None:
-            image = self.transform(image)
-        return image, torch.FloatTensor([1])  # label is dummy
-
-    def __len__(self):
-        return len(self.image_names)
-
-
-class EmarieSkirtShellDataset(Dataset):
-    def __init__(self, root_dir, transform=None):
-        files_file = []
-        for root, _, filenames in os.walk(root_dir):
-            files = [os.path.join(root, f) for f in filenames if os.path.isfile(os.path.join(root, f))]
-            files_file.extend(files)
-        self.image_names = files_file
+    def __init__(self, root_dir, mix=True, transform=None):
+        self.image_names = []
+        skirt_dir = os.path.join(root_dir, 'skirt')
+        for f in os.listdir(skirt_dir):
+            fpath = os.path.join(skirt_dir, f)
+            if os.path.isfile(fpath):
+                self.image_names.append(fpath)
+        if mix:
+            shell_dir = os.path.join(root_dir, 'shell')
+            for f in os.listdir(shell_dir):
+                fpath = os.path.join(shell_dir, f)
+                if os.path.isfile(fpath):
+                    self.image_names.append(fpath)
         self.transform = transform
 
     def __getitem__(self, index):
