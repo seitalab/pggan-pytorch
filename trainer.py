@@ -115,25 +115,41 @@ class trainer:
                 self.flag_flush = False
                 self.phase = 'stab'
                 self.complete = 0.0
-                self.G.module.flush_network()   # flush G
-                print(self.G.module.model)
+                if torch.cuda.device_count() > 1:
+                    self.G.module.flush_network()   # flush G
+                else:
+                    self.G.flush_network()
+                print(self.G)
                 self.G.to(device)
                 self.fadein['gen'] = None
-                self.D.module.flush_network()   # flush and,
+                if torch.cuda.device_count() > 1:
+                    self.D.module.flush_network()   # flush and,
+                else:
+                    self.D.flush_network()
                 self.D.to(device)
-                print(self.D.module.model)
+                print(self.D)
                 self.fadein['dis'] = None
 
             # grow network. (= add fadein and go to trns)
             if floor(self.resl) != prev_resl and floor(self.resl)<self.max_resl+1:
                 self.lr = self.lr * float(self.config.lr_decay)
-                self.G.module.grow_network(floor(self.resl))
+                if torch.cuda.device_count() > 1:
+                    self.G.module.grow_network(floor(self.resl))
+                else:
+                    self.G.grow_network(floor(self.resl))
                 self.G.to(device)
-                self.D.module.grow_network(floor(self.resl))
+                if torch.cuda.device_count() > 1:
+                    self.D.module.grow_network(floor(self.resl))
+                else:
+                    self.D.grow_network(floor(self.resl))
                 self.D.to(device)
                 self.renew_everything()
-                self.fadein['gen'] = self.G.module.model.fadein_block
-                self.fadein['dis'] = self.D.module.model.fadein_block
+                if torch.cuda.device_count() > 1:
+                    self.fadein['gen'] = self.G.module.model.fadein_block
+                    self.fadein['dis'] = self.D.module.model.fadein_block
+                else:
+                    self.fadein['gen'] = self.G.model.fadein_block
+                    self.fadein['dis'] = self.D.model.fadein_block
                 self.flag_flush = True
 
             if floor(self.resl) > self.max_resl:
@@ -254,17 +270,23 @@ class trainer:
 
 
     def get_state(self, target):
+        if torch.cuda.device_count() > 1:
+            G = self.G.module
+            D = self.D.module
+        else:
+            G = self.G
+            D = self.D
         if target == 'gen':
             state = {
                 'resl' : self.resl,
-                'state_dict' : self.G.module.state_dict(),
+                'state_dict' : G.state_dict(),
                 'optimizer' : self.opt_g.state_dict(),
             }
             return state
         elif target == 'dis':
             state = {
                 'resl' : self.resl,
-                'state_dict' : self.D.module.state_dict(),
+                'state_dict' : D.state_dict(),
                 'optimizer' : self.opt_d.state_dict(),
             }
             return state

@@ -36,8 +36,18 @@ class dataloader:
                                             transform=transform,
                                             image_list_file='./data/nih-chest-xrays/labels/train_list.txt')
         elif self.dataset_name == 'emarie':
-            self.dataset = EmarieDataset(root_dir='../dataset/skirt_shell/raw',
+            self.dataset = EmarieDataset(root_dir='../dataset/emarie/raw',
                                          mix=self.cfg.mix, transform=transform)
+        elif self.dataset_name == 'emarie_rose':
+            # vertically flip rose images
+            rose_transform = transforms.Compose([
+                        transforms.Resize((self.imsize, self.imsize)),
+                        transforms.RandomVerticalFlip(p=1.0),
+                        transforms.ToTensor(),
+                        ])
+            self.dataset = EmarieDataset(root_dir='../dataset/emarie/raw',
+                                         skirt_transform=transform,
+                                         rose_transform=rose_transform)
 
         self.dataloader = DataLoader(
             dataset=self.dataset,
@@ -81,6 +91,37 @@ class EmarieDataset(Dataset):
         image = Image.open(image_name).convert('RGB')
         if self.transform is not None:
             image = self.transform(image)
+        return image, torch.FloatTensor([1])  # label is dummy
+
+    def __len__(self):
+        return len(self.image_names)
+
+
+class EmarieRoseDataset(Dataset):
+    def __init__(self, root_dir, skirt_transform=None, rose_transform=None):
+        self.image_names = []
+        skirt_dir = os.path.join(root_dir, 'skirt_trimmed_512')
+        rose_dir = os.path.join(root_dir, 'rose_512')
+        for f in os.listdir(skirt_dir):
+            fpath = os.path.join(skirt_dir, f)
+            if os.path.isfile(fpath):
+                self.image_names.append(fpath)
+        for f in os.listdir(rose_dir):
+            fpath = os.path.join(rose_dir, f)
+            if os.path.isfile(fpath):
+                self.image_names.append(fpath)
+        self.skirt_transform = skirt_transform
+        self.rose_transform = rose_transform
+
+    def __getitem__(self, index):
+        image_name = self.image_names[index]
+        image = Image.open(image_name).convert('RGB')
+        if 'rose' in image_name:
+            if self.rose_transform is not None:
+                image = self.rose_transform(image)
+        elif 'skirt' in image_name:
+            if self.skirt_transform is not None:
+                image = self.skirt_transform(image)
         return image, torch.FloatTensor([1])  # label is dummy
 
     def __len__(self):
