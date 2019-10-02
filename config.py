@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser('PGGAN')
 
 ## general settings.
 # parser.add_argument('--train_data_root', type=str, default='/home1/irteam/nashory/data/CelebA/Img')
-parser.add_argument('--dataset', type=str, default='emarie',
+parser.add_argument('--dataset', type=str, default='emarie_rose',
                     choices=['mnist',
                              'fashion-mnist',
                              'celebA',

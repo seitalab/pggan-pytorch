@@ -45,9 +45,9 @@ class dataloader:
                         transforms.RandomVerticalFlip(p=1.0),
                         transforms.ToTensor(),
                         ])
-            self.dataset = EmarieDataset(root_dir='../dataset/emarie/raw',
-                                         skirt_transform=transform,
-                                         rose_transform=rose_transform)
+            self.dataset = EmarieRoseDataset(root_dir='../dataset/emarie/raw',
+                                             skirt_transform=transform,
+                                             rose_transform=rose_transform)
 
         self.dataloader = DataLoader(
             dataset=self.dataset,
