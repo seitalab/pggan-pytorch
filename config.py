@@ -37,7 +37,7 @@ parser.add_argument('--ngf', type=int, default=512)             # feature dimens
 parser.add_argument('--ndf', type=int, default=512)             # feature dimension of first layer of discriminator.
 parser.add_argument('--TICK', type=int, default=1000)           # 1 tick = 1000 images = (1000/batch_size) iter.
 parser.add_argument('--max_resl', type=int, default=9)         # 10-->1024, 9-->512, 8-->256
-parser.add_argument('--trns_tick', type=int, default=200)       # transition tick
+parser.add_argument('--trns_tick', type=int, default=100)       # transition tick
 parser.add_argument('--stab_tick', type=int, default=100)       # stabilization tick
 parser.add_argument('--lambda_', type=int, default=10)          # lambda for gradient penalty
 
