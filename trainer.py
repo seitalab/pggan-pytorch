@@ -297,7 +297,7 @@ class trainer:
         # save every 100 tick if the network is in stab phase.
         ndis = 'dis_R{}_T{}.pth.tar'.format(int(floor(self.resl)), self.globalTick)
         ngen = 'gen_R{}_T{}.pth.tar'.format(int(floor(self.resl)), self.globalTick)
-        if self.globalTick%50==0:
+        if self.globalTick%5==0:
             if self.phase == 'stab' or self.phase == 'final':
                 save_path = os.path.join(path, ndis)
                 if not os.path.exists(save_path):
