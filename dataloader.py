@@ -48,6 +48,9 @@ class dataloader:
             self.dataset = EmarieRoseDataset(root_dir='../dataset/emarie/raw',
                                              skirt_transform=transform,
                                              rose_transform=rose_transform)
+        elif self.dataset_name == 'gucci':
+            self.dataset = GucciDataset(root_dir='../data/Fashion_GAN/Input_data/Gucci',
+                                        transform=transform)
 
         self.dataloader = DataLoader(
             dataset=self.dataset,
@@ -122,6 +125,45 @@ class EmarieRoseDataset(Dataset):
         elif 'skirt' in image_name:
             if self.skirt_transform is not None:
                 image = self.skirt_transform(image)
+        return image, torch.FloatTensor([1])  # label is dummy
+
+    def __len__(self):
+        return len(self.image_names)
+
+
+class GucciDataset(Dataset):
+    def __init__(self, root_dir, transform=None, season=None, year=None):
+        '''
+        season: 'F', 'S', None
+        year: 2008-2015
+        '''
+        season = ['S', 'F'] if season is None else [season]
+        if year is None:
+            year = [str(x) for x in range(2008, 2016)]
+        else:
+            year = [str(year)]
+        self.image_names = []
+        for f in os.listdir(root_dir):
+            fdir = os.path.join(root_dir, f)
+            for ff in os.listdir(fdir):
+                ffdir = os.path.join(fdir, ff)
+                ff_split = ff.split('_')
+                if ff_split[-1] not in season:
+                    continue
+                if ff_split[1] not in year:
+                    continue
+                for fff in os.listdir(ffdir):
+                    fffpath = os.path.join(ffdir, fff)
+                    if os.path.isfile(fffpath):
+                        self.image_names.append(fffpath)
+
+        self.transform = transform
+
+    def __getitem__(self, index):
+        image_name = self.image_names[index]
+        image = Image.open(image_name).convert('RGB')
+        if self.transform is not None:
+            image = self.transform(image)
         return image, torch.FloatTensor([1])  # label is dummy
 
     def __len__(self):
